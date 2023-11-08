@@ -1,30 +1,32 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="/dist/output.css" rel="stylesheet">
   <style>
-
     body {
-      display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
       margin: 0;
     }
 
     .rounded-square {
+      display: flex;
       width: 75%;
+      height: auto;
       background-color: black;
       border-radius: 10px;
       color: white;
       text-align: center;
       line-height: 100px;
-      display: flex;
-      flex-direction: column; /* Stack the title and motto vertically */
-      justify-content: center;
       align-items: center;
+      justify-content: center;
+      flex-direction: column; /* Stack the title and motto vertically */
+    }
+
+    .center {
+      justify-content: center;
+      display: flex;
     }
 
     .nomargin {
@@ -33,26 +35,36 @@
     }
     .title {
       font-size: 500%;
-      margin-bottom: -20px;
+      margin-bottom: -25px;
+      flex-direction: column;
     }
 
     .motto {
-      font-size: 1.5em;
-      color:rgb(220, 255, 161);
+      font-size: 1.5rem;
+      color: rgb(220, 255, 161);
+      flex-direction: column;
     }
 
+    .para {
+      display: block;
+    }
+    
     
   </style>
-
 </head>
 <body>
-  <div class="rounded-square">
-    <div class = "nomargin">
+  
+</body>
+  <div class = "center" style="margin-top: 15%;">
+      <div class="rounded-square">
+    <div class="nomargin">
       <h1 class="title">OtisAI</h1>
-      <p class="motto"> Unlocking the Power of AI with Ease</p>
+      <p class="motto">Unlocking the Power of AI with Ease</p>
     </div>
-
   </div>
 
+  </div>
+  
+  <p class="center" style="font-size: 26px">htest</p>
 </body>
 </html>
