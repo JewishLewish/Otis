@@ -2,14 +2,14 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import numpy as np
 
-# Load the saved model
-loaded_model = AutoModelForSequenceClassification.from_pretrained('./model/')
+def loadmodel():
+    return AutoModelForSequenceClassification.from_pretrained('./model/')
 
-# Load the tokenizer associated with the pre-trained model
-loaded_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+def load_tokenizer():
+    return AutoTokenizer.from_pretrained('bert-base-uncased')
 
 # Use the loaded model and tokenizer for inference
-def get_prediction_with_loaded_model(text):
+def get_prediction_with_loaded_model(text, loaded_model = loadmodel(), loaded_tokenizer = load_tokenizer()):
     encoding = loaded_tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
     outputs = loaded_model(**encoding)
 
@@ -30,8 +30,9 @@ def get_prediction_with_loaded_model(text):
         }
 
 # Example usage:
-while True:
-    print("User input:")
-    x = input()
-    result = get_prediction_with_loaded_model(x)
-    print(result)
+if __name__ == "__main__":
+    while True:
+        print("User input:")
+        x = input()
+        result = get_prediction_with_loaded_model(x)
+        print(result)

@@ -65,7 +65,7 @@ def main():
 
     from transformers import TrainingArguments, Trainer
 
-    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch",num_train_epochs=2)
+    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch",num_train_epochs=3)
 
     trainer = Trainer(
         model=model,
