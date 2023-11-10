@@ -2,21 +2,14 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import numpy as np
 
-def loadmodel():
-    return AutoModelForSequenceClassification.from_pretrained('./model/')
-
-def load_tokenizer():
-    return AutoTokenizer.from_pretrained('bert-base-uncased')
-
 # Use the loaded model and tokenizer for inference
-def get_prediction_with_loaded_model(text, loaded_model = loadmodel(), loaded_tokenizer = load_tokenizer()):
+def get_prediction_with_loaded_model(text, loaded_model = AutoModelForSequenceClassification.from_pretrained('./model/'), loaded_tokenizer = AutoTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2')):
     encoding = loaded_tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
     outputs = loaded_model(**encoding)
 
     sigmoid = torch.nn.Sigmoid()
     probs = sigmoid(outputs.logits.squeeze().cpu()).detach().numpy()
     label = np.argmax(probs, axis=-1)
-    print(label)
 
     if label == 1:
         return {
@@ -29,10 +22,13 @@ def get_prediction_with_loaded_model(text, loaded_model = loadmodel(), loaded_to
             'probability': probs[0]
         }
 
+
+def main(*argv):
+    combined_args = ' '.join(argv)
+    print(get_prediction_with_loaded_model(combined_args))
+
 # Example usage:
 if __name__ == "__main__":
-    while True:
-        print("User input:")
-        x = input()
-        result = get_prediction_with_loaded_model(x)
-        print(result)
+    import sys
+    arguments = sys.argv[1:]
+    main(*arguments)
