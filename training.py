@@ -8,16 +8,18 @@ import numpy as np
 
 def main():
     def process_data(row):
-
-        text = row['message']
+        #1 -> Spam
+        text = row['sms']
         text = str(text)
         text = ' '.join(text.split())
 
         encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
 
         label = 0
-        if row['label_text'] == "spam": #spam
-            label += 1
+        print(row['label'])
+        if row["label"] == 1: #spam
+            print("CONTAINS SPAM")
+            label = 1
 
         encodings['label'] = label
         encodings['text'] = text
@@ -26,13 +28,19 @@ def main():
 
 
     # Load the dataset
-    dataset = load_dataset('SetFit/enron_spam')
+    #dataset = load_dataset('sms_spam')
+    #columns_to_remove = ['message_id','text', 'label', 'date']
+
+    #new_df = pd.read_csv("new_data.csv")
 
     # Convert to pandas DataFrame
-    df = pd.DataFrame(dataset['train'])
+    df = pd.read_csv("spam_dataset.csv")
+    #df.drop(columns=columns_to_remove, inplace=True)
+
 
     # Save DataFrame to CSV
-    df.to_csv('enron_spam_dataset.csv', index=False)
+    #df.to_csv('spam_dataset.csv', index=False)
+
 
     print("Processing...")
     processed_data = []
@@ -65,7 +73,7 @@ def main():
 
     from transformers import TrainingArguments, Trainer
 
-    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch",num_train_epochs=3)
+    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch",num_train_epochs=5)
 
     trainer = Trainer(
         model=model,
@@ -119,6 +127,36 @@ def main():
 
     print(get_prediction(INPUT))
 
+def insert():
+    # Specify the path to your CSV file
+    csv_file_path = 'enron_spam_detector.csv'
+
+    # New row of data to be inserted
+    new_row = ['new_message_id', 'new_text', 'new_label', 'new_label_text', 'new_subject', 'new_message', 'new_date']
+
+    # Open the CSV file in read mode
+    with open(csv_file_path, 'r') as file:
+        # Create a CSV reader object
+        csv_reader = csv.reader(file)
+
+        # Read the existing data
+        existing_data = list(csv_reader)
+
+    # Insert the new row into the existing data
+    existing_data.append(new_row)
+
+    # Specify the path to the new CSV file (with the new row inserted)
+    new_csv_file_path = 'new_file_with_row.csv'
+
+    # Open the new CSV file in write mode
+    with open(new_csv_file_path, 'w', newline='') as new_file:
+        # Create a CSV writer object
+        csv_writer = csv.writer(new_file)
+
+        # Write the updated data to the new CSV file
+        csv_writer.writerows(existing_data)
+
+    print("CSV file with the new row has been created:", new_csv_file_path)
 
 if __name__ == "__main__":
     main()

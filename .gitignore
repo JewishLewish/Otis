@@ -5,3 +5,9 @@
 /target
 
 /result
+
+#libtorch files
+libtorch
+
+#site files
+__site
