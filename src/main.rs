@@ -4,12 +4,13 @@ extern crate rocket;
 //extern crate rocket_contrib;
 
 use std::collections::HashMap;
+use std::path::{PathBuf, Path};
 use rocket::{get, routes};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
 
-
+const DEBUG: bool = true;
 
 /*
 SQL CODE
@@ -46,11 +47,25 @@ ________________________________________________________________________________
 */
 
 
+use rocket::response::NamedFile;
+
+#[get("/assets/<file..>")]
+fn file(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("assets/").join(file)).ok()
+}
+
+
 #[get("/")]
 fn index() -> Template {
     let mut context = HashMap::new();
     context.insert("name", "Rocket!");
     return Template::render("index", &context);
+}
+
+#[get("/login")]
+fn login() -> Template {
+    let context: HashMap<String, String> = HashMap::new();
+    return Template::render("login", &context);
 }
 
 #[get("/api")]
@@ -109,6 +124,8 @@ fn python() -> Context {
 fn main() {
 
    let data_sql = DataSql::__init__("users.db");
-   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api]).launch();
-   rocket::ignite().attach(Template::fairing()).mount("/api", routes![api]).launch();
+   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, file]).launch();
+
+   //rocket::ignite().attach(Template::fairing()).mount("/api", routes![api]).launch();
+   //rocket::ignite().attach(Template::fairing()).mount("/login", routes![login]);
 }
