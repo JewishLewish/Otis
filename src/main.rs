@@ -44,7 +44,7 @@ impl Default for DataSql {
 }
 
 impl DataSql {
-    
+    /// Initializes the database if it doesn't exist.
     fn __init__() {
         let connection = Connection::open(DB_FILE).unwrap();
         let _ =connection.execute(
@@ -54,7 +54,17 @@ impl DataSql {
         );
     }
 
+    /// Adds a new user to the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - A reference to a `Login` struct containing user account details.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the user was successfully added, `false` if the user already exists.
     fn add_user(self, input: &Login) -> bool {
+        
         let connection = Connection::open(self.dbfile.to_owned()).unwrap();
         if !(self.user_exist(input.email.to_owned())) {
             return false;
@@ -71,10 +81,19 @@ impl DataSql {
         }
     }
 
+    /// Checks if a user with the given email already exists in the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `email` - A String representing the email address of the user.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the user exists, `false` otherwise.
     fn user_exist(&self, email: String) -> bool {
         let connection = Connection::open(&self.dbfile).unwrap();
 
-        let count: i8 = connection.query_row(
+        let count: u8 = connection.query_row(
             format!("SELECT COUNT(*) FROM users WHERE email = '{}'",email).as_str(),
             [],
             |row| row.get(0),
@@ -83,6 +102,11 @@ impl DataSql {
         if count == 0 { true } else { false }
     }
 
+    /// Generates a unique ID based on the current number of users in the database.
+    ///
+    /// # Returns
+    ///
+    /// Returns a unique ID as a `u32`.
     fn unique_id(&self) -> u32 {
         let connection = Connection::open(&self.dbfile).unwrap();
         
@@ -95,6 +119,16 @@ impl DataSql {
         return count;
     }
 
+    /// Generates a unique API ID based on the user's business, password, and unique ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - A reference to a `Login` struct containing user account details.
+    /// * `u_id` - A reference to the user's unique ID.
+    ///
+    /// # Returns
+    ///
+    /// Returns a unique API ID as a `String`.
     fn api_unique_id(&self, input: &Login, u_id: &u32) -> String {
 
         format!("{}+{}+{}", input.business, input.password, u_id )
@@ -108,29 +142,26 @@ Using Rust Rocket over Python Flask
 Python Flask has weird mem leaks -> https://stackoverflow.com/questions/49991234/flask-app-memory-leak-caused-by-each-api-call
 ______________________________________________________________________________________________________________________________
 */
-
-
 use rocket::response::NamedFile;
 
+/// every item in the /assets/ folder can be used
+/// This can include .css files, .img files, etc.
 #[get("/assets/<file..>")]
 fn file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("assets/").join(file)).ok()
 }
 
 
+/// home page
 #[get("/")]
 fn index() -> Template {
-    let mut context = HashMap::new();
-    context.insert("name", "Rocket!");
+    let context: HashMap<String, String> = HashMap::new();
     return Template::render("index", &context);
 }
 
-#[get("/login")]
-fn login() -> Template {
-    let context: HashMap<String, String> = HashMap::new();
-    return Template::render("login", &context);
-}
 
+/// This is for loginpost(); Registering an Account
+/// Contains: email, password and business associated
 #[derive(FromForm, Debug)]
 struct Login {
     email: String,
@@ -138,6 +169,18 @@ struct Login {
     business: String
 }
 
+/// Gets Login page 
+#[get("/login")]
+fn login() -> Template {
+    let context: HashMap<String, String> = HashMap::new();
+    return Template::render("login", &context);
+}
+
+
+/// Processes User Login Information
+/// Checks if User account already exists or not
+/// If exists -> Do not Insert Data to SQL
+/// Otherwise -> Insert data to SQL; Generate Unique_ID , API_Unique_ID
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
 fn loginpost(user_input: Form<Login>) -> String {
 
@@ -153,6 +196,7 @@ fn loginpost(user_input: Form<Login>) -> String {
 
 }
 
+/// Api Page
 #[get("/api")]
 fn api() -> String {
 
@@ -165,11 +209,8 @@ fn api() -> String {
 }
 
 
-/*
-Python Inlining Code
-
-Model I am using in Python
-*/
+/// Python Inlining Code
+/// Allows for Python Bindings in Rust
 fn python() -> Context {
     let c = Context::new();
 
@@ -189,12 +230,12 @@ fn python() -> Context {
 
             if label == 1:
                 return {
-                    "sentiment": "Spam",
+                    "type": "Spam",
                     "probability": probs[1]
                 }
             else:
                 return {
-                    "sentiment": "Ham",
+                    "type": "Ham",
                     "probability": probs[0]
                 }
 
@@ -214,7 +255,4 @@ fn main() {
    //print!("{}",x);
 
    rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, loginpost, file]).launch();
-
-   //rocket::ignite().attach(Template::fairing()).mount("/api", routes![api]).launch();
-   //rocket::ignite().attach(Template::fairing()).mount("/login", routes![login]);
 }
