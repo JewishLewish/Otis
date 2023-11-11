@@ -169,20 +169,19 @@ struct Login {
     business: String
 }
 
-/// Gets Login page 
-#[get("/login")]
-fn login() -> Template {
+/// Gets Register page 
+#[get("/register")]
+fn register() -> Template {
     let context: HashMap<String, String> = HashMap::new();
-    return Template::render("login", &context);
+    return Template::render("register", &context);
 }
-
 
 /// Processes User Login Information
 /// Checks if User account already exists or not
 /// If exists -> Do not Insert Data to SQL
 /// Otherwise -> Insert data to SQL; Generate Unique_ID , API_Unique_ID
-#[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn loginpost(user_input: Form<Login>) -> String {
+#[post("/register", format = "application/x-www-form-urlencoded", data = "<user_input>")]
+fn registerpost(user_input: Form<Login>) -> String {
 
     let copy = user_input.0;
     let success = DataSql::add_user(DataSql {..Default::default()} , &copy);
@@ -192,9 +191,27 @@ fn loginpost(user_input: Form<Login>) -> String {
     } else {
         format!("FAILED!")
     }
-    
-
 }
+
+#[get("/login")]
+fn login() -> Template {
+    let context: HashMap<String, String> = HashMap::new();
+    return Template::render("register", &context);
+}
+
+#[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
+fn loginpost(user_input: Form<Login>) -> String {
+
+    let copy = user_input.0;
+    let success = DataSql::user_exist(&DataSql {..Default::default()} , copy.email);
+
+    if success {
+        format!("Redirect")
+    } else {
+        format!("Account doesn't exist!")
+    }
+}
+
 
 /// Api Page
 #[get("/api")]
@@ -254,5 +271,5 @@ fn main() {
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
 
-   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, loginpost, file]).launch();
+   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, register, registerpost, file, login, loginpost]).launch();
 }
