@@ -199,7 +199,7 @@ fn file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("assets/").join(file)).ok()
 }
 
-use rocket::http::{Cookies, Cookie};
+use rocket::http::{Cookies, Cookie, RawStr};
 
 /// home page
 #[get("/")]
@@ -293,8 +293,8 @@ struct Api_response {
 }
 
 /// Api Page
-#[get("/api")]
-fn api(cookies: Cookies) -> String {
+#[get("/api?<content>")]
+fn api(mut content: String, cookies: Cookies) -> String {
     if cookies.get("token").is_none() { //variable exists
         return "None".to_string();
     }
@@ -313,10 +313,12 @@ fn api(cookies: Cookies) -> String {
 
     //all checks are passed!
 
+    content = content.replace("%20", " ");
+
     let c = python();
    
     c.run(python! {
-        output = main("test")
+        output = main('content)
     });
 
     c.get::<String>("output")
