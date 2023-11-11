@@ -53,8 +53,6 @@ fn index() -> Template {
     return Template::render("index", &context);
 }
 
-use pyo3::types::PyString;
-
 #[get("/api")]
 fn api() -> String {
 
