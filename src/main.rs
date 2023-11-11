@@ -6,12 +6,16 @@ extern crate rocket;
 use std::collections::HashMap;
 use std::path::{PathBuf, Path};
 use rocket::request::Form;
-use rocket::{get, routes, FromForm, post, Data, data};
+use rocket::{get, routes, FromForm, post};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
 
-const DEBUG: bool = true;
+
+/* 
+CONSTANT VARIABLES
+Doesn't change; Consistent Throughout Code
+*/
 const DB_FILE: &str = "user.db";
 
 /*
@@ -22,11 +26,10 @@ _________________________
 */
 #[warn(dead_code)]
 struct DataSql {
-    dbfile: String,
-    connection: Connection,
+    dbfile: String
 }
 
-struct userSQL {
+struct UserSql {
     email: String,
     name: String,
     business: String,
@@ -34,28 +37,33 @@ struct userSQL {
     api_id: i64
 }
 
+impl Default for DataSql {
+    fn default() -> Self {
+        DataSql { dbfile: DB_FILE.to_string()}
+    }
+}
+
 impl DataSql {
     
-    fn __init__(dbfile: &str) -> DataSql {
+    fn __init__() {
         let connection = Connection::open(DB_FILE).unwrap();
         let _ =connection.execute(
             
             r#"CREATE TABLE IF NOT EXISTS users ("email" TEXT, "name" TEXT, "business" TEXT, "id" INTEGER, "api_id" TEXT);"#,
             [],
         );
-
-        DataSql { dbfile: format!("{}",DB_FILE), connection: connection }
     }
 
-    fn add_user(input: login) -> bool {
-        let connection = Connection::open(DB_FILE).unwrap();
-        if !(DataSql::user_exist(input.email.to_owned())) {
+    fn add_user(self, input: &Login) -> bool {
+        let connection = Connection::open(self.dbfile.to_owned()).unwrap();
+        if !(self.user_exist(input.email.to_owned())) {
             return false;
         } else {
             
+            let u_id = &self.unique_id();
             let _ =connection.execute(
             
-            format!(r#"INSERT INTO users (email, name, business, id, api_id) VALUES ("{}", "{}", "{}", 0, 123);"#, input.email, input.content, input.business).as_str(),
+            format!(r#"INSERT INTO users (email, name, business, id, api_id) VALUES ("{}", "{}", "{}", {}, "{}");"#, input.email, input.password, input.business, u_id, &self.api_unique_id(input, &u_id)).as_str(),
             [],
             );
 
@@ -63,8 +71,8 @@ impl DataSql {
         }
     }
 
-    fn user_exist(email: String) -> bool {
-        let connection = Connection::open(DB_FILE).unwrap();
+    fn user_exist(&self, email: String) -> bool {
+        let connection = Connection::open(&self.dbfile).unwrap();
 
         let count: i8 = connection.query_row(
             format!("SELECT COUNT(*) FROM users WHERE email = '{}'",email).as_str(),
@@ -73,6 +81,23 @@ impl DataSql {
         ).expect("Failed to get row count");
 
         if count == 0 { true } else { false }
+    }
+
+    fn unique_id(&self) -> u32 {
+        let connection = Connection::open(&self.dbfile).unwrap();
+        
+        let count: u32 = connection.query_row(
+            format!("SELECT COUNT(*) FROM users").as_str(),
+            [],
+            |row| row.get(0),
+        ).expect("Failed to get row count");
+
+        return count;
+    }
+
+    fn api_unique_id(&self, input: &Login, u_id: &u32) -> String {
+
+        format!("{}+{}+{}", input.business, input.password, u_id )
     }
 }
 
@@ -107,22 +132,24 @@ fn login() -> Template {
 }
 
 #[derive(FromForm, Debug)]
-struct login {
+struct Login {
     email: String,
-    content: String,
+    password: String,
     business: String
 }
 
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn loginpost(user_input: Form<login>) -> &'static str {
+fn loginpost(user_input: Form<Login>) -> String {
 
     let copy = user_input.0;
-    let success = DataSql::add_user(copy);
+    let success = DataSql::add_user(DataSql {..Default::default()} , &copy);
+
     if success {
-        "Went through!"
+        format!("Successfully Inserted {:?}", copy)
     } else {
-        "Failed"
+        format!("FAILED!")
     }
+    
 
 }
 
@@ -181,7 +208,7 @@ fn python() -> Context {
 
 fn main() {
 
-   let data_sql = DataSql::__init__("users.db");
+   DataSql::__init__();
    
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
