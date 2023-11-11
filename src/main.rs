@@ -6,7 +6,7 @@ extern crate rocket;
 use std::collections::HashMap;
 use std::path::{PathBuf, Path};
 use rocket::request::Form;
-use rocket::{get, routes, FromForm, post};
+use rocket::{get, routes, FromForm, post, uri, Data};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
@@ -29,12 +29,13 @@ struct DataSql {
     dbfile: String
 }
 
+#[derive(Debug)]
 struct UserSql {
     email: String,
-    name: String,
+    password: String,
     business: String,
     id: i32,
-    api_id: i64
+    api_id: String
 }
 
 impl Default for DataSql {
@@ -49,7 +50,7 @@ impl DataSql {
         let connection = Connection::open(DB_FILE).unwrap();
         let _ =connection.execute(
             
-            r#"CREATE TABLE IF NOT EXISTS users ("email" TEXT, "name" TEXT, "business" TEXT, "id" INTEGER, "api_id" TEXT);"#,
+            r#"CREATE TABLE IF NOT EXISTS users ("email" TEXT, "password" TEXT, "business" TEXT, "id" INTEGER, "api_id" TEXT);"#,
             [],
         );
     }
@@ -73,7 +74,7 @@ impl DataSql {
             let u_id = &self.generate_unique_id();
             let _ =connection.execute(
             
-            format!(r#"INSERT INTO users (email, name, business, id, api_id) VALUES ("{}", "{}", "{}", {}, "{}");"#, input.email, input.password, input.business, u_id, &self.generate_api_unique_id(input, &u_id)).as_str(),
+            format!(r#"INSERT INTO users (email, password, business, id, api_id) VALUES ("{}", "{}", "{}", {}, "{}");"#, input.email, input.password, input.business, u_id, &self.generate_api_unique_id(input, &u_id)).as_str(),
             [],
             );
 
@@ -102,6 +103,20 @@ impl DataSql {
         if count == 0 { false } else { true }
         // false -> no acct associated / does not exists with email
         // true -> acct associated / exists with email
+    }
+
+    fn token_exist(&self, api_token: String) -> bool {
+        let connection = Connection::open(&self.dbfile).unwrap();
+
+        let count: u8 = connection.query_row(
+            format!("SELECT COUNT(*) FROM users WHERE api_id = '{}'",api_token).as_str(),
+            [],
+            |row| row.get(0),
+        ).expect("Failed to get row count");
+
+        if count == 0 { false } else { true }
+        // false -> no acct associated / THERE IS NO TOKEN WITH SAME ID
+        // true -> acct associated / THIS IS TOKEN WITH SAME ID
     }
 
     /// Generates a unique ID based on the current number of users in the database.
@@ -144,6 +159,28 @@ impl DataSql {
         //  u_id -> each user have their own unique id (similiar to how each user have their own email)
         //  random_number -> each user has a generated random number (u32) to ensure a level of security
     }
+
+    fn find_data_with_email(&self, email: String) -> Option<UserSql> {
+        let conn = Connection::open(&self.dbfile).unwrap();
+
+        let mut stmt = conn
+            .prepare(&format!(r#"SELECT email, password, business, id, api_id FROM users WHERE email = '{}'"#, email).to_string())
+            .unwrap();
+
+        let mut rows = stmt.query([]).unwrap();
+
+        if let Some(row) = rows.next().unwrap() {
+            Some(UserSql {
+                email: row.get(0).unwrap(),
+                password: row.get(1).unwrap(),
+                business: row.get(2).unwrap(),
+                id: row.get(3).unwrap(),
+                api_id: row.get(4).unwrap(),
+            })
+        } else {
+            None
+        }
+    }
 }
 
 /*
@@ -153,7 +190,7 @@ Using Rust Rocket over Python Flask
 Python Flask has weird mem leaks -> https://stackoverflow.com/questions/49991234/flask-app-memory-leak-caused-by-each-api-call
 ______________________________________________________________________________________________________________________________
 */
-use rocket::response::NamedFile;
+use rocket::response::{NamedFile, Redirect};
 
 /// every item in the /assets/ folder can be used
 /// This can include .css files, .img files, etc.
@@ -162,12 +199,19 @@ fn file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("assets/").join(file)).ok()
 }
 
+use rocket::http::{Cookies, Cookie};
 
 /// home page
 #[get("/")]
-fn index() -> Template {
+fn index(cookies: Cookies) -> Result<Template, Redirect> {
+    if let Some(_) = cookies.get("token") {
+        // Token is present, redirect to apitoken route
+        return Err(Redirect::to(uri!(apitoken)));
+    }
+
+    print!("NO COOKIES FOUND!");
     let context: HashMap<String, String> = HashMap::new();
-    return Template::render("index", &context);
+    Ok(Template::render("index", &context))
 }
 
 
@@ -192,17 +236,22 @@ fn register() -> Template {
 /// If exists -> Do not Insert Data to SQL
 /// Otherwise -> Insert data to SQL; Generate Unique_ID , API_Unique_ID
 #[post("/register", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn registerpost(user_input: Form<Register>) -> String {
+fn registerpost(user_input: Form<Register>, mut cookies: Cookies) -> Redirect {
 
     print!("{:?}",user_input);
 
     let copy = user_input.0;
     let success = DataSql::add_user(DataSql {..Default::default()} , &copy);
 
+
     if success {
-        format!("Successfully Inserted {:?}", copy)
+        let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, copy.email).unwrap();
+        cookies.add(Cookie::new("token", x.api_id));
+        cookies.add(Cookie::new("email", x.email));
+
+        Redirect::to(uri!(apitoken))
     } else {
-        format!("FAILED!")
+        Redirect::to(uri!(register))
     }
 }
 
@@ -220,33 +269,76 @@ fn login() -> Template {
 
 
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn loginpost(user_input: Form<Login>) -> String {
+fn loginpost(user_input: Form<Login>, mut cookies: Cookies) -> Redirect {
 
     print!("{:?}",user_input);
 
     let copy = user_input.0;
-    let success = DataSql::user_exist(&DataSql {..Default::default()} , copy.email);
+    let success = DataSql::user_exist(&DataSql {..Default::default()} , copy.email.to_owned());
 
     if success {
-        format!("Redirect")
+        let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, copy.email).unwrap();
+        cookies.add(Cookie::new("token", x.api_id));
+        cookies.add(Cookie::new("email", x.email));
+
+        Redirect::to(uri!(apitoken))
     } else {
-        format!("Account doesn't exist!")
+        Redirect::to(uri!(login))
     }
 }
 
+struct Api_response {
+    status: String,
+    output: String
+}
 
 /// Api Page
 #[get("/api")]
-fn api() -> String {
+fn api(cookies: Cookies) -> String {
+    if cookies.get("token").is_none() { //variable exists
+        return "None".to_string();
+    }
+
+    let email = cookies.get("email").unwrap().value();
+
+    if !(DataSql::user_exist(&DataSql { ..Default::default() }, email.to_string())) {
+        return "None".to_string();
+    }
+
+    let api_token = cookies.get("token").unwrap().value();
+
+    if !(DataSql::token_exist(&DataSql { ..Default::default() }, api_token.to_string())) {
+        return "None".to_string();
+    }
+
+    //all checks are passed!
 
     let c = python();
    
     c.run(python! {
         output = main("test")
     });
-    return c.get::<String>("output");
+
+    c.get::<String>("output")
 }
 
+/// API token for user
+#[get("/apitoken")]
+fn apitoken(cookies: Cookies) -> Result<Redirect, Template> {
+    if let Some(_) = cookies.get("token") {
+        let email = cookies.get("email").unwrap();
+
+        let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, email.value().to_string()).unwrap();
+
+
+        let mut context = HashMap::new();
+        context.insert("user", x.email);
+        context.insert("api_token", x.api_id);
+        return Err(Template::render("api_token", &context));
+    }
+
+    Ok(Redirect::to(uri!(index)))
+}
 
 /// Python Inlining Code
 /// Allows for Python Bindings in Rust
@@ -289,9 +381,11 @@ fn python() -> Context {
 fn main() {
 
    DataSql::__init__();
+   //let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, "test".to_string());
+   //print!("{}",x.unwrap().email);
    
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
 
-   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, register, registerpost, file, login, loginpost]).launch();
+   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken]).launch();
 }
