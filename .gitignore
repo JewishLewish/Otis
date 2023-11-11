@@ -11,3 +11,6 @@ libtorch
 
 #site files
 __site
+
+#other files
+*.db

@@ -3,17 +3,28 @@
 extern crate rocket;
 //extern crate rocket_contrib;
 
-use std::{collections::HashMap, process::{Stdio, Command}, io::{Write, Read}};
-use rocket::{get, routes, Data};
+use std::collections::HashMap;
+use rocket::{get, routes};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
+use inline_python::{python, Context};
 
+
+
+/*
+SQL CODE
+
+Used to store user's data
+_________________________
+*/
+#[warn(dead_code)]
 struct DataSql {
     dbfile: String,
     connection: Connection,
 }
 
 impl DataSql {
+    
     fn __init__(dbfile: &str) -> DataSql {
         let connection = Connection::open(dbfile).unwrap();
         let _ =connection.execute(
@@ -26,6 +37,15 @@ impl DataSql {
     }
 }
 
+/*
+Website Code
+
+Using Rust Rocket over Python Flask 
+Python Flask has weird mem leaks -> https://stackoverflow.com/questions/49991234/flask-app-memory-leak-caused-by-each-api-call
+______________________________________________________________________________________________________________________________
+*/
+
+
 #[get("/")]
 fn index() -> Template {
     let mut context = HashMap::new();
@@ -33,12 +53,29 @@ fn index() -> Template {
     return Template::render("index", &context);
 }
 
-use inline_python::python;
+use pyo3::types::PyString;
 
-fn python() {
-    let who = "world";
-    let n = 5;
-    python! {
+#[get("/api")]
+fn api() -> String {
+
+    let c = python();
+   
+    c.run(python! {
+        output = main("test")
+    });
+    return c.get::<String>("output");
+}
+
+
+/*
+Python Inlining Code
+
+Model I am using in Python
+*/
+fn python() -> Context {
+    let c = Context::new();
+
+    c.run (python! {
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
         import torch
         import numpy as np
@@ -65,16 +102,15 @@ fn python() {
 
 
         def main(target):
-            print(target)
-            print(get_prediction_with_loaded_model(target))
+            return str(get_prediction_with_loaded_model(target))
+    });
 
-        # Example usage:
-        if __name__ == "__main__":
-            import sys
-            main("Hello world")
-    }
+    return c;
 }
 
 fn main() {
-   python();
+
+   let data_sql = DataSql::__init__("users.db");
+   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api]).launch();
+   rocket::ignite().attach(Template::fairing()).mount("/api", routes![api]).launch();
 }
