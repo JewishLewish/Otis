@@ -4,13 +4,16 @@ extern crate rocket;
 //extern crate rocket_contrib;
 
 use std::collections::HashMap;
+use std::fmt::format;
 use std::path::{PathBuf, Path};
-use rocket::{get, routes};
+use rocket::request::Form;
+use rocket::{get, routes, FromForm, post, Data};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
 
 const DEBUG: bool = true;
+const DB_FILE: &str = "user.db";
 
 /*
 SQL CODE
@@ -34,7 +37,11 @@ impl DataSql {
             [],
         );
 
-        DataSql { dbfile: dbfile.to_owned(), connection: connection }
+        DataSql { dbfile: format!("{}",DB_FILE), connection: connection }
+    }
+
+    fn add_user(input: login) -> bool {
+        return false;
     }
 }
 
@@ -66,6 +73,19 @@ fn index() -> Template {
 fn login() -> Template {
     let context: HashMap<String, String> = HashMap::new();
     return Template::render("login", &context);
+}
+
+#[derive(FromForm)]
+struct login {
+    email: String,
+    content: String,
+    business: String
+}
+
+#[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
+fn loginpost(user_input: Form<login>) -> String {
+    println!("{}", user_input.email);
+    format!("print test {}", user_input.email)
 }
 
 #[get("/api")]
@@ -124,7 +144,7 @@ fn python() -> Context {
 fn main() {
 
    let data_sql = DataSql::__init__("users.db");
-   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, file]).launch();
+   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, loginpost, file]).launch();
 
    //rocket::ignite().attach(Template::fairing()).mount("/api", routes![api]).launch();
    //rocket::ignite().attach(Template::fairing()).mount("/login", routes![login]);
