@@ -6,7 +6,8 @@ extern crate rocket;
 use std::collections::HashMap;
 use std::path::{PathBuf, Path};
 use rocket::request::Form;
-use rocket::{get, routes, FromForm, post, uri, Data};
+use rocket_contrib::json::{Json, self};
+use rocket::{get, routes, FromForm, post, uri};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
@@ -295,20 +296,21 @@ struct Api_response {
 /// Api Page
 #[get("/api?<content>")]
 fn api(mut content: String, cookies: Cookies) -> String {
+
     if cookies.get("token").is_none() { //variable exists
-        return "None".to_string();
+        return r#"{"Status": 1}"#.to_string();
     }
 
     let email = cookies.get("email").unwrap().value();
 
     if !(DataSql::user_exist(&DataSql { ..Default::default() }, email.to_string())) {
-        return "None".to_string();
+        return r#"{"Status": 1}"#.to_string();
     }
 
     let api_token = cookies.get("token").unwrap().value();
 
     if !(DataSql::token_exist(&DataSql { ..Default::default() }, api_token.to_string())) {
-        return "None".to_string();
+        return r#"{"Status": 1}"#.to_string();
     }
 
     //all checks are passed!
@@ -323,6 +325,7 @@ fn api(mut content: String, cookies: Cookies) -> String {
 
     c.get::<String>("output")
 }
+
 
 /// API token for user
 #[get("/apitoken")]
@@ -341,6 +344,37 @@ fn apitoken(cookies: Cookies) -> Result<Redirect, Template> {
 
     Ok(Redirect::to(uri!(index)))
 }
+use serde::Deserialize;
+#[derive(Debug, PartialEq, Eq, Deserialize)]
+struct ApiInput {
+    content: String,
+    apiToken: String
+}
+
+#[post("/api", format = "application/json", data = "<json_data>")]
+fn api_post(json_data: Json<ApiInput>) -> String {
+
+    let json_data =  json_data.into_inner();
+
+    let api_token = json_data.apiToken;;
+
+    if !(DataSql::token_exist(&DataSql { ..Default::default() }, api_token.to_string())) {
+        return r#"{"Status": "No Api Token Associated"}"#.to_string();
+    }
+
+    // All checks are passed!
+    let content = json_data.content;
+
+    let c = python();
+
+    c.run(python! {
+        output = main('content)
+    });
+
+    c.get::<String>("output")
+}
+
+
 
 /// Python Inlining Code
 /// Allows for Python Bindings in Rust
@@ -389,5 +423,5 @@ fn main() {
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
 
-   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken]).launch();
+   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).launch();
 }
