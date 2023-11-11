@@ -4,10 +4,9 @@ extern crate rocket;
 //extern crate rocket_contrib;
 
 use std::collections::HashMap;
-use std::fmt::format;
 use std::path::{PathBuf, Path};
 use rocket::request::Form;
-use rocket::{get, routes, FromForm, post, Data};
+use rocket::{get, routes, FromForm, post, Data, data};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
@@ -27,10 +26,18 @@ struct DataSql {
     connection: Connection,
 }
 
+struct userSQL {
+    email: String,
+    name: String,
+    business: String,
+    id: i32,
+    api_id: i64
+}
+
 impl DataSql {
     
     fn __init__(dbfile: &str) -> DataSql {
-        let connection = Connection::open(dbfile).unwrap();
+        let connection = Connection::open(DB_FILE).unwrap();
         let _ =connection.execute(
             
             r#"CREATE TABLE IF NOT EXISTS users ("email" TEXT, "name" TEXT, "business" TEXT, "id" INTEGER, "api_id" TEXT);"#,
@@ -41,7 +48,31 @@ impl DataSql {
     }
 
     fn add_user(input: login) -> bool {
-        return false;
+        let connection = Connection::open(DB_FILE).unwrap();
+        if !(DataSql::user_exist(input.email.to_owned())) {
+            return false;
+        } else {
+            
+            let _ =connection.execute(
+            
+            format!(r#"INSERT INTO users (email, name, business, id, api_id) VALUES ("{}", "{}", "{}", 0, 123);"#, input.email, input.content, input.business).as_str(),
+            [],
+            );
+
+            return true;
+        }
+    }
+
+    fn user_exist(email: String) -> bool {
+        let connection = Connection::open(DB_FILE).unwrap();
+
+        let count: i8 = connection.query_row(
+            format!("SELECT COUNT(*) FROM users WHERE email = '{}'",email).as_str(),
+            [],
+            |row| row.get(0),
+        ).expect("Failed to get row count");
+
+        if count == 0 { true } else { false }
     }
 }
 
@@ -75,7 +106,7 @@ fn login() -> Template {
     return Template::render("login", &context);
 }
 
-#[derive(FromForm)]
+#[derive(FromForm, Debug)]
 struct login {
     email: String,
     content: String,
@@ -144,6 +175,10 @@ fn python() -> Context {
 fn main() {
 
    let data_sql = DataSql::__init__("users.db");
+   
+   let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
+   print!("{}",x);
+
    rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, loginpost, file]).launch();
 
    //rocket::ignite().attach(Template::fairing()).mount("/api", routes![api]).launch();
