@@ -114,9 +114,16 @@ struct login {
 }
 
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn loginpost(user_input: Form<login>) -> String {
-    println!("{}", user_input.email);
-    format!("print test {}", user_input.email)
+fn loginpost(user_input: Form<login>) -> &'static str {
+
+    let copy = user_input.0;
+    let success = DataSql::add_user(copy);
+    if success {
+        "Went through!"
+    } else {
+        "Failed"
+    }
+
 }
 
 #[get("/api")]
@@ -176,8 +183,8 @@ fn main() {
 
    let data_sql = DataSql::__init__("users.db");
    
-   let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
-   print!("{}",x);
+   //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
+   //print!("{}",x);
 
    rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, login, loginpost, file]).launch();
 
