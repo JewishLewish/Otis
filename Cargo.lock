@@ -9,6 +9,7 @@ dependencies = [
  "inline-python",
  "lazy_static",
  "pyo3",
+ "rand",
  "rocket",
  "rocket_contrib",
  "rusqlite",

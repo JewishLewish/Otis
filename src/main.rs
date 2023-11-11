@@ -10,7 +10,7 @@ use rocket::{get, routes, FromForm, post};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
 use inline_python::{python, Context};
-
+use rand::Rng;
 
 /* 
 CONSTANT VARIABLES
@@ -63,17 +63,17 @@ impl DataSql {
     /// # Returns
     ///
     /// Returns `true` if the user was successfully added, `false` if the user already exists.
-    fn add_user(self, input: &Login) -> bool {
+    fn add_user(self, input: &Register) -> bool {
         
         let connection = Connection::open(self.dbfile.to_owned()).unwrap();
-        if !(self.user_exist(input.email.to_owned())) {
+        if self.user_exist(input.email.to_owned()) {
             return false;
         } else {
             
-            let u_id = &self.unique_id();
+            let u_id = &self.generate_unique_id();
             let _ =connection.execute(
             
-            format!(r#"INSERT INTO users (email, name, business, id, api_id) VALUES ("{}", "{}", "{}", {}, "{}");"#, input.email, input.password, input.business, u_id, &self.api_unique_id(input, &u_id)).as_str(),
+            format!(r#"INSERT INTO users (email, name, business, id, api_id) VALUES ("{}", "{}", "{}", {}, "{}");"#, input.email, input.password, input.business, u_id, &self.generate_api_unique_id(input, &u_id)).as_str(),
             [],
             );
 
@@ -99,7 +99,9 @@ impl DataSql {
             |row| row.get(0),
         ).expect("Failed to get row count");
 
-        if count == 0 { true } else { false }
+        if count == 0 { false } else { true }
+        // false -> no acct associated / does not exists with email
+        // true -> acct associated / exists with email
     }
 
     /// Generates a unique ID based on the current number of users in the database.
@@ -107,7 +109,7 @@ impl DataSql {
     /// # Returns
     ///
     /// Returns a unique ID as a `u32`.
-    fn unique_id(&self) -> u32 {
+    fn generate_unique_id(&self) -> u32 {
         let connection = Connection::open(&self.dbfile).unwrap();
         
         let count: u32 = connection.query_row(
@@ -129,9 +131,18 @@ impl DataSql {
     /// # Returns
     ///
     /// Returns a unique API ID as a `String`.
-    fn api_unique_id(&self, input: &Login, u_id: &u32) -> String {
+    fn generate_api_unique_id(&self, input: &Register, u_id: &u32) -> String {
 
-        format!("{}+{}+{}", input.business, input.password, u_id )
+        let mut rng = rand::thread_rng();
+
+        let random_number: u32 = rng.gen();
+
+        format!("{}{}_{}{}", input.email, input.password, u_id, random_number)
+        //to ensure encryption it uses:
+        //  email -> since one email can usually be assigned to a person
+        //  password -> user picks their own password
+        //  u_id -> each user have their own unique id (similiar to how each user have their own email)
+        //  random_number -> each user has a generated random number (u32) to ensure a level of security
     }
 }
 
@@ -163,7 +174,7 @@ fn index() -> Template {
 /// This is for loginpost(); Registering an Account
 /// Contains: email, password and business associated
 #[derive(FromForm, Debug)]
-struct Login {
+struct Register {
     email: String,
     password: String,
     business: String
@@ -181,7 +192,9 @@ fn register() -> Template {
 /// If exists -> Do not Insert Data to SQL
 /// Otherwise -> Insert data to SQL; Generate Unique_ID , API_Unique_ID
 #[post("/register", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn registerpost(user_input: Form<Login>) -> String {
+fn registerpost(user_input: Form<Register>) -> String {
+
+    print!("{:?}",user_input);
 
     let copy = user_input.0;
     let success = DataSql::add_user(DataSql {..Default::default()} , &copy);
@@ -193,14 +206,23 @@ fn registerpost(user_input: Form<Login>) -> String {
     }
 }
 
+#[derive(FromForm, Debug)]
+struct Login {
+    email: String,
+    password: String,
+}
+
 #[get("/login")]
 fn login() -> Template {
     let context: HashMap<String, String> = HashMap::new();
-    return Template::render("register", &context);
+    return Template::render("login", &context);
 }
+
 
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
 fn loginpost(user_input: Form<Login>) -> String {
+
+    print!("{:?}",user_input);
 
     let copy = user_input.0;
     let success = DataSql::user_exist(&DataSql {..Default::default()} , copy.email);
