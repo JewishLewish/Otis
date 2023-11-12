@@ -123,7 +123,7 @@ def main():
 
     INPUT = """buy online and save viagra price for this high demand med best price for this high demand med best price for this high demand med buy nowbuy nowbuy price for this high demand med best price for this high demand med best price for this high demand med buy nowbuy nowbuy nowcialis soft price for this high demand med best price for this high demand med best price for this high demand med buy nowbuy nowbuy your penis width ( girth ) by 20 % gain up to 3 + full inches in length buy nowbuy now"""
 
-    print(get_prediction(INPUT))
+    print(get_prediction(INPUT)) 
 
 if __name__ == "__main__":
     main()
