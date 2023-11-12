@@ -17,9 +17,3 @@ serde = { version = "1.0.192", features = ["derive"] }
 [dependencies.rocket_contrib]
 version = "0.4.11" # Not a good idea to use * as version
 features = ["handlebars_templates"]
-
-[development]
-assets_dir = "static/"
-
-[production]
-assets_dir = "static/"
