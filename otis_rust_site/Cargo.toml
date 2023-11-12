@@ -1,5 +1,5 @@
 [package]
-name = "Otis"
+name = "otis_rust_site"
 version = "0.1.0"
 edition = "2021"
 

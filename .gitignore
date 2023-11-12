@@ -17,3 +17,10 @@ __site
 
 #Shuttle.rs
 shuttle
+
+#Otis_Rust_Site
+otis_rust_site/target
+otis_rust_site/Cargo.lock
+
+#csv files - not needed
+*.csv
