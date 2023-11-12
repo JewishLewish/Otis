@@ -5,8 +5,8 @@ headers = {'Content-Type': 'application/json'}
 
 # Replace this with your actual JSON data
 json_data = {
-    "content": "X0X0X0X0X0X0 wanna have s3x with me FUCK ME HARD",
-    "apiToken": "lanbrokhman@gmail.comp2kzea4s_13493957161"
+    "content": "We are giving away free discord nitro! Just join at discord.gg/booster",
+    "apiToken": "test"
 }
 
 response = requests.post(url, json=json_data, headers=headers)
