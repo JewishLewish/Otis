@@ -7,7 +7,7 @@ import numpy as np
 import pyarrow as pa
 from datasets import Dataset
 
-def process_data(row, tokenizer):
+def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')):
     text = str(row['sms']).strip()
     encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
     label = 1 if row["label"] == 1 else 0
@@ -28,7 +28,7 @@ def prepare_datasets(train_df, valid_size=0.2, random_state=2022):
     return train_hg, valid_hg
 
 def train_and_evaluate(model, train_dataset, eval_dataset, tokenizer):
-    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=10)
+    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=.1)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -39,10 +39,10 @@ def train_and_evaluate(model, train_dataset, eval_dataset, tokenizer):
     trainer.train()
     trainer.evaluate()
 
-def save_model(model, path='./otisv1/'):
+def save_model(model, path='./otisv1_test/'):
     model.save_pretrained(path)
 
-def load_model_and_tokenizer(model_path='./otisv1/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
+def load_model_and_tokenizer(model_path='./otisv1_test/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     return model, tokenizer
