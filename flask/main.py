@@ -1,3 +1,4 @@
+import json
 import subprocess
 
 import requests
@@ -66,9 +67,6 @@ except:
     download_model()
 
 
-exit()
-
-
 
 # Use the loaded model and tokenizer for inference
 def get_prediction_with_loaded_model(text, loaded_model = AutoModelForSequenceClassification.from_pretrained('./otisv1/'), loaded_tokenizer = AutoTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2')):
@@ -98,15 +96,16 @@ app.secret_key = "put_something_here"
 def index():
     if request.method == "GET":
         # Get parameter "Content" from the query string
-        content_param = request.args.get("Content")
-        return f"GET request - Content: {content_param}"
+        content_param = request.args.get("content")
+        return f"GET request - content: {content_param}"
 
     elif request.method == "POST":
         # Get "Content" from JSON data in the request
         json_data = request.get_json()
-        if json_data and "Content" in json_data:
-            content_json = json_data["Content"]
-            return f"POST request - Content: {content_json}"
+        if json_data and "content" in json_data:
+            content_json = json_data["content"]
+            output = get_prediction_with_loaded_model(text=f"{content_json}")
+            return str(output)
         else:
             return "POST request - Content not found in JSON data"
 
