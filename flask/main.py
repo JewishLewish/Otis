@@ -108,7 +108,7 @@ def index():
             if json_data and "content" in json_data:
                 content_json = json_data["content"]
                 output = get_prediction_with_loaded_model(text=f"{content_json}")
-                print(f"[{bcolors.OKGREEN}GET Successful{bcolors.ENDC}] -> Status 200")
+                print(f"[{bcolors.OKGREEN}POST Successful{bcolors.ENDC}] -> Status 200")
                 return str(output)
             else:
                 return "POST request - Content not found in JSON data"
@@ -117,7 +117,7 @@ def index():
         print(f"[{bcolors.FAIL}Error{bcolors.ENDC}] -> Error: {e}")
 
 if __name__ == "__main__":
-    print(f"[{bcolors.OKGREEN}Module Not Founded{bcolors.ENDC}] -> Server Starting...")
+    print(f"[{bcolors.OKGREEN}Ready to Start{bcolors.ENDC}] -> Server Starting...")
     # from waitress import serve
     # serve(app, host="0.0.0.0", port=8080)
     app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
