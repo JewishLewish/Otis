@@ -5,6 +5,7 @@ import requests
 
 #CONFIG
 MODEL = "otisv1" #1 model as of now, keep it this
+PORT = 8000
 
 #Colors
 class bcolors:
@@ -66,9 +67,6 @@ try:
 except:
     download_model()
 
-
-
-# Use the loaded model and tokenizer for inference
 def get_prediction_with_loaded_model(text, loaded_model = AutoModelForSequenceClassification.from_pretrained('./otisv1/'), loaded_tokenizer = AutoTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2')):
     encoding = loaded_tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
     outputs = loaded_model(**encoding)
@@ -94,23 +92,32 @@ app.secret_key = "put_something_here"
 
 @app.route("/api", methods=["GET", "POST"])
 def index():
-    if request.method == "GET":
-        # Get parameter "Content" from the query string
-        content_param = request.args.get("content")
-        return f"GET request - content: {content_param}"
-
-    elif request.method == "POST":
-        # Get "Content" from JSON data in the request
-        json_data = request.get_json()
-        if json_data and "content" in json_data:
-            content_json = json_data["content"]
-            output = get_prediction_with_loaded_model(text=f"{content_json}")
+    print(f"[{bcolors.WARNING}ADDRESS Accessed Server{bcolors.ENDC}] -> IP Address: {request.remote_addr}")
+    
+    try:
+        if request.method == "GET":
+            # Get parameter "Content" from the query string
+            content_param = request.args.get("content")
+            output = get_prediction_with_loaded_model(text=f"{content_param}")
+            print(f"[{bcolors.OKGREEN}GET Successful{bcolors.ENDC}] -> Status 200")
             return str(output)
-        else:
-            return "POST request - Content not found in JSON data"
+
+        elif request.method == "POST":
+            # Get "Content" from JSON data in the request
+            json_data = request.get_json()
+            if json_data and "content" in json_data:
+                content_json = json_data["content"]
+                output = get_prediction_with_loaded_model(text=f"{content_json}")
+                print(f"[{bcolors.OKGREEN}GET Successful{bcolors.ENDC}] -> Status 200")
+                return str(output)
+            else:
+                return "POST request - Content not found in JSON data"
+    
+    except Exception as e:
+        print(f"[{bcolors.FAIL}Error{bcolors.ENDC}] -> Error: {e}")
 
 if __name__ == "__main__":
+    print(f"[{bcolors.OKGREEN}Module Not Founded{bcolors.ENDC}] -> Server Starting...")
     # from waitress import serve
     # serve(app, host="0.0.0.0", port=8080)
-    PORT = 8000
     app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
