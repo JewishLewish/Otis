@@ -1,129 +1,87 @@
 from datasets import load_dataset
 import pandas as pd
-from transformers import AutoTokenizer
-tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 from sklearn.model_selection import train_test_split
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
 import torch
 import numpy as np
+import pyarrow as pa
+from datasets import Dataset
 
-def main():
-    def process_data(row):
-        #1 -> Spam
-        text = row['sms']
-        text = str(text)
-        text = ' '.join(text.split())
+def process_data(row, tokenizer):
+    text = str(row['sms']).strip()
+    encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
+    label = 1 if row["label"] == 1 else 0
+    encodings['label'] = label
+    encodings['text'] = text
+    return encodings
 
-        encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
-
-        label = 0
-        if row["label"] == 1: #spam
-            label = 1
-
-        encodings['label'] = label
-        encodings['text'] = text
-
-        return encodings
-
-
-    # Load the dataset
-    #dataset = load_dataset('sms_spam')
-    #columns_to_remove = ['message_id','text', 'label', 'date']
-
-    #new_df = pd.read_csv("new_data.csv")
-
-    # Convert to pandas DataFrame
+def load_and_process_data():
     df = pd.read_csv("spam_dataset.csv")
-    #df.drop(columns=columns_to_remove, inplace=True)
-
-
-    # Save DataFrame to CSV
-    #df.to_csv('spam_dataset.csv', index=False)
-
-
-    print("Processing...")
-    processed_data = []
-
-    for i in range(len(df[:10000])):
-        processed_data.append(process_data(df.iloc[i]))
-
+    processed_data = [process_data(df.iloc[i]) for i in range(min(len(df), 10000))]
     new_df = pd.DataFrame(processed_data)
+    return new_df
 
-    train_df, valid_df = train_test_split(
-        new_df,
-        test_size=0.2,
-        random_state=2022
-    )
-
-    print("works")
-
-    import pyarrow as pa
-    from datasets import Dataset
-
+def prepare_datasets(train_df, valid_size=0.2, random_state=2022):
+    train_df, valid_df = train_test_split(train_df, test_size=valid_size, random_state=random_state)
     train_hg = Dataset(pa.Table.from_pandas(train_df))
     valid_hg = Dataset(pa.Table.from_pandas(valid_df))
+    return train_hg, valid_hg
 
-    from transformers import AutoModelForSequenceClassification
-
-    model = AutoModelForSequenceClassification.from_pretrained(
-        'google/bert_uncased_L-2_H-128_A-2',
-        num_labels=2
-    )
-
-    from transformers import TrainingArguments, Trainer
-
-    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch",num_train_epochs=10)
-
+def train_and_evaluate(model, train_dataset, eval_dataset, tokenizer):
+    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=10)
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_hg,
-        eval_dataset=valid_hg,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         tokenizer=tokenizer
     )
-
     trainer.train()
     trainer.evaluate()
 
-    model.save_pretrained('./otisv1/')
+def save_model(model, path='./otisv1/'):
+    model.save_pretrained(path)
 
-    from transformers import AutoModelForSequenceClassification
+def load_model_and_tokenizer(model_path='./otisv1/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
+    model = AutoModelForSequenceClassification.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    return model, tokenizer
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+def get_prediction(model, tokenizer, text):
+    encoding = tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
+    encoding = {k: v.to(model.device) for k, v in encoding.items()}
+    outputs = model(**encoding)
+    sigmoid = torch.nn.Sigmoid()
+    probs = sigmoid(outputs.logits.squeeze().cpu()).detach().numpy()
+    label = np.argmax(probs, axis=-1)
+    
+    return {
+        'sentiment': 'Spam' if label == 1 else 'Ham',
+        'probability': probs[1] if label == 1 else probs[0]
+    }
 
-    new_model = AutoModelForSequenceClassification.from_pretrained('./otisv1/').to(device)
+def main():
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
-    from transformers import AutoTokenizer
+    # Load and preprocess data
+    new_df = load_and_process_data()
 
-    new_tokenizer = AutoTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2')
+    # Prepare datasets
+    train_hg, valid_hg = prepare_datasets(new_df)
 
-    def get_prediction(text):
-        encoding = new_tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
-        encoding = {k: v.to(trainer.model.device) for k,v in encoding.items()}
+    # Load or train the model
+    model = AutoModelForSequenceClassification.from_pretrained('google/bert_uncased_L-2_H-128_A-2', num_labels=2)
+    train_and_evaluate(model, train_hg, valid_hg, tokenizer)
 
-        outputs = new_model(**encoding)
+    # Save the trained model
+    save_model(model)
 
-        logits = outputs.logits
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        sigmoid = torch.nn.Sigmoid()
-        print(sigmoid)
-        probs = sigmoid(logits.squeeze().cpu())
-        probs = probs.detach().numpy()
-        label = np.argmax(probs, axis=-1)
-        
-        if label == 1:
-            return {
-                'sentiment': 'Spam',
-                'probability': probs[1]
-            }
-        else:
-            return {
-                'sentiment': 'Ham',
-                'probability': probs[0]
-            }
+    # Load the model and tokenizer
+    new_model, new_tokenizer = load_model_and_tokenizer()
 
-    INPUT = """buy online and save viagra price for this high demand med best price for this high demand med best price for this high demand med buy nowbuy nowbuy price for this high demand med best price for this high demand med best price for this high demand med buy nowbuy nowbuy nowcialis soft price for this high demand med best price for this high demand med best price for this high demand med buy nowbuy nowbuy your penis width ( girth ) by 20 % gain up to 3 + full inches in length buy nowbuy now"""
-
-    print(get_prediction(INPUT)) 
+    # Example prediction
+    INPUT = """buy online and save... (your input text)"""
+    print(get_prediction(new_model, new_tokenizer, INPUT)) 
 
 if __name__ == "__main__":
     main()
