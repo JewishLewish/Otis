@@ -1,33 +1,74 @@
 import subprocess
 
+import requests
+
 #CONFIG
 MODEL = "otisv1" #1 model as of now, keep it this
 
+#Colors
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
-# List of required modules
-required_modules = ["flask", "transformers", "torch", "numpy"]
+def install_needed_modules():
+    print(f"[{bcolors.WARNING}Module Not Founded{bcolors.ENDC}] -> Didn't find certain module needed")
+    
+    required_modules = ["flask", "transformers", "torch", "numpy"]
 
-# Check if each module is installed
-for module in required_modules:
-    try:
-        __import__(module)
-    except ImportError:
-        print(f"{module} not found. Installing...")
-        subprocess.check_call(["pip", "install", module])
+    # Check if each module is installed
+    for module in required_modules:
+        try:
+            __import__(module)
+        except ImportError:
+            print(f"[{bcolors.WARNING}Module Not Founded{bcolors.ENDC}] -> {module} not found. Installing...")
+            subprocess.check_call(["pip", "install", module])
+            print(f"[{bcolors.OKGREEN}{module} Successfully Downloaded{bcolors.ENDC}] -> Successfully downloaded latest version for module: {module}")
+
+try:
+    from flask import Flask, render_template, request
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    import torch
+    import numpy as np
+except:
+    install_needed_modules()
 
 
-#Check if we have OtisV1
-import os
-if os.path.exists(f"/{MODEL}"):
-    os.mkdir(f"/{MODEL}")
-    response = request.get("https://github.com/JewishLewish/Otis/raw/main/otisv1/model.safetensors")
-    with open("/oti", 'wb') as file:
+def download_model():
+    import os
+
+    print(f"[{bcolors.WARNING}Model Not Found{bcolors.ENDC}] -> Otis Anti-Spam AI Model is not found... Installing...")
+    os.makedirs(MODEL, exist_ok=True)
+
+    # Download model.safetensors
+    response = requests.get(f"https://github.com/JewishLewish/Otis/raw/main/{MODEL}/model.safetensors")
+    with open(f"{MODEL}/model.safetensors", 'wb') as file:
         file.write(response.content)
+        print(f"[{bcolors.OKGREEN}{MODEL} Successfully Downloaded{bcolors.ENDC}] -> Found the model you are looking for!")
 
-from flask import Flask, render_template, request
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-import torch
-import numpy as np
+    # Download config.json
+    response = requests.get(f"https://github.com/JewishLewish/Otis/raw/main/{MODEL}/config.json")
+    with open(f"{MODEL}/config.json", 'wb') as file:
+        file.write(response.content)
+        print(f"[{bcolors.OKGREEN}{MODEL} config.json FOUND{bcolors.ENDC}] -> Found the model config.json you are looking for!")
+
+
+try:
+    _ = AutoModelForSequenceClassification.from_pretrained('./otisv1/')
+    del _
+except:
+    download_model()
+
+
+exit()
+
+
 
 # Use the loaded model and tokenizer for inference
 def get_prediction_with_loaded_model(text, loaded_model = AutoModelForSequenceClassification.from_pretrained('./otisv1/'), loaded_tokenizer = AutoTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2')):
