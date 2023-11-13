@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
 import torch
+import torch.onnx
 import numpy as np
 import pyarrow as pa
 from datasets import Dataset
@@ -73,6 +74,32 @@ def get_prediction(model, tokenizer, text):
         'probability': probs[1] if label == 1 else probs[0]
     }
 
+def convert_to_onnx(model, tokenizer, path='./otisv1_onnx/model.onnx', input_example="buy online and save..."):
+    import os
+    # Set the model to evaluation mode
+    model.eval()
+
+    # Tokenize the input example
+    inputs = tokenizer(input_example, return_tensors="pt")
+
+    # Export the model to ONNX format
+    with torch.no_grad():
+        # Create the directory if it doesn't exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        # Use a different approach for file opening
+        with open(path, 'wb') as f:
+            torch.onnx.export(
+                model,
+                (inputs["input_ids"], inputs["attention_mask"]),
+                f,
+                input_names=["input_ids", "attention_mask"],
+                output_names=["output"],
+                dynamic_axes={"input_ids": {0: "batch_size"}, "attention_mask": {0: "batch_size"}, "output": {0: "batch_size"}}
+            )
+
+    print(f"Model successfully exported to {path}")
+
 def main():
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
@@ -91,6 +118,8 @@ def main():
 
     # Load the model and tokenizer
     new_model, new_tokenizer = load_model_and_tokenizer()
+
+    convert_to_onnx(new_model, new_tokenizer)
 
     # Example prediction
     INPUT = """buy online and save... (your input text)"""
