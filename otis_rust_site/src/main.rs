@@ -194,8 +194,11 @@ use rocket::fs::NamedFile;
 /// every item in the /assets/ folder can be used
 /// This can include .css files, .img files, etc.
 #[get("/assets/<file..>")]
-fn file(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("assets/").join(file)).ok()
+async fn file(file: PathBuf) -> Option<NamedFile> {
+    match NamedFile::open(Path::new("assets/").join(file)).await {
+        Ok(named_file) => Some(named_file),
+        Err(_) => None,
+    }
 }
 
 use rocket::http::{Cookie, CookieJar};
@@ -238,8 +241,9 @@ fn register() -> Template {
 fn registerpost(user_input: Form<Register>, mut cookies: &CookieJar<'_>) -> Redirect {
 
     print!("{:?}",user_input);
+    let copy = user_input.into_inner();
 
-    let copy = user_input.0;
+    //let copy = user_input.0;
     let success = DataSql::add_user(DataSql {..Default::default()} , &copy);
 
 
@@ -254,7 +258,7 @@ fn registerpost(user_input: Form<Register>, mut cookies: &CookieJar<'_>) -> Redi
     }
 }
 
-#[derive(FromForm, Debug)]
+#[derive(Serialize, FromForm, Debug)]
 struct Login {
     email: String,
     password: String,
@@ -272,7 +276,8 @@ fn loginpost(user_input: Form<Login>, mut cookies: &CookieJar<'_>) -> Redirect {
 
     print!("{:?}",user_input);
 
-    let copy = user_input.0;
+    let copy = user_input.into_inner();
+
     let success = DataSql::user_exist(&DataSql {..Default::default()} , copy.email.to_owned());
 
     if success {
@@ -301,7 +306,7 @@ fn api(mut content: String, cookies: &CookieJar<'_>) -> String {
 
     let email = cookies.get("email").map(|crumb| format!("Message: {}", crumb.value()));
 
-    if !(DataSql::user_exist(&DataSql { ..Default::default() }, email.to_string())) {
+    if !(DataSql::user_exist(&DataSql { ..Default::default() }, email.unwrap())) {
         return r#"{"Status": 1}"#.to_string();
     }
 
@@ -321,7 +326,7 @@ fn api(mut content: String, cookies: &CookieJar<'_>) -> String {
 
 /// API token for user
 #[get("/apitoken")]
-fn apitoken(cookies: Cookies) -> Result<Redirect, Template> {
+fn apitoken(cookies: &CookieJar<'_>) -> Result<Redirect, Template> {
     if let Some(_) = cookies.get("token") {
         let email = cookies.get("email").unwrap();
 
@@ -337,18 +342,22 @@ fn apitoken(cookies: Cookies) -> Result<Redirect, Template> {
     Ok(Redirect::to(uri!(index)))
 }
 use serde::Deserialize;
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Serialize, Debug, PartialEq, Eq, Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct ApiInput {
     content: String,
     apiToken: String
 }
+
+use rocket::serde::{Serialize, json::Json};
+
 
 #[post("/api", format = "application/json", data = "<json_data>")]
 fn api_post(json_data: Json<ApiInput>) -> String {
 
     let json_data =  json_data.into_inner();
 
-    let api_token = json_data.apiToken;;
+    let api_token = json_data.apiToken;
 
     if !(DataSql::token_exist(&DataSql { ..Default::default() }, api_token.to_string())) {
         return r#"{"Status": "No Api Token Associated"}"#.to_string();
@@ -409,5 +418,5 @@ fn main() {
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
 
-   rocket::build().attach().mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).launch();
+   rocket::build().mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).launch();
 }
