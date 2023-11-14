@@ -1,4 +1,6 @@
-extern crate rocket;
+mod otisonnx;
+
+#[macro_use] extern crate rocket;
 //extern crate rocket_contrib;
 
 use std::collections::HashMap;
@@ -409,7 +411,12 @@ fn api_post(json_data: Json<ApiInput>) -> String {
     return c;
 } */
 
-fn main() {
+
+
+#[launch]
+fn rocket() -> _ {
+
+    otisonnx::test();
 
    DataSql::__init__();
    //let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, "test".to_string());
@@ -418,5 +425,5 @@ fn main() {
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
 
-   rocket::build().mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).launch();
+   rocket::build().mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).attach(Template::fairing())
 }

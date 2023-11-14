@@ -8,6 +8,8 @@ import numpy as np
 import pyarrow as pa
 from datasets import Dataset
 
+OUTPUT = "otisv1"
+
 def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')):
     text = str(row['sms']).strip()
     encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
@@ -40,21 +42,21 @@ def train_and_evaluate(model, train_dataset, eval_dataset, tokenizer):
     trainer.train()
     trainer.evaluate()
 
-def save_model_as_safetensors(model, path='./otisv1_test/'):
+def save_model_as_safetensors(model, path=f'./{OUTPUT}/'):
     model.save_pretrained(path)
 
-def save_model(model, tokenizer, path='./otisv1_test/'):
+def save_model(model, tokenizer, path=f'./{OUTPUT}/'):
     # Save the model's state_dict using torch.save
     torch.save(model.state_dict(), f"{path}/model.pth")
     # Save the tokenizer using save_pretrained
     tokenizer.save_pretrained(path)
 
-def load_model_and_tokenizer_as_safetensors(model_path='./otisv1_test/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
+def load_model_and_tokenizer_as_safetensors(model_path=f'./{OUTPUT}/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     return model, tokenizer
 
-def load_model_and_tokenizer(model_path='./otisv1_test/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
+def load_model_and_tokenizer(model_path=f'./{OUTPUT}/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
     # Load the model's state_dict using torch.load
     model_state_dict = torch.load(f"{model_path}/model.pth")
     model = AutoModelForSequenceClassification.from_pretrained(tokenizer_name, state_dict=model_state_dict)
@@ -74,7 +76,7 @@ def get_prediction(model, tokenizer, text):
         'probability': probs[1] if label == 1 else probs[0]
     }
 
-def convert_to_onnx(model, tokenizer, path='./otisv1_onnx/model.onnx', input_example="buy online and save..."):
+def convert_to_onnx(model, tokenizer, path=f'./{OUTPUT}/onnx/model.onnx', input_example="buy online and save..."):
     import os
     # Set the model to evaluation mode
     model.eval()
@@ -115,6 +117,8 @@ def main():
 
     # Save the trained model
     save_model(tokenizer=tokenizer, model=model)
+
+    save_model_as_safetensors(model=model)
 
     # Load the model and tokenizer
     new_model, new_tokenizer = load_model_and_tokenizer()
