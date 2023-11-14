@@ -10,7 +10,6 @@ use rocket_contrib::json::{Json, self};
 use rocket::{get, routes, FromForm, post, uri};
 use rocket_contrib::templates::Template;
 use rusqlite::Connection;
-use inline_python::{python, Context};
 use rand::Rng;
 
 /* 
@@ -317,13 +316,7 @@ fn api(mut content: String, cookies: Cookies) -> String {
 
     content = content.replace("%20", " ");
 
-    let c = python();
-   
-    c.run(python! {
-        output = main('content)
-    });
-
-    c.get::<String>("output")
+    format!("test")
 }
 
 
@@ -365,20 +358,14 @@ fn api_post(json_data: Json<ApiInput>) -> String {
     // All checks are passed!
     let content = json_data.content;
 
-    let c = python();
-
-    c.run(python! {
-        output = main('content)
-    });
-
-    c.get::<String>("output")
+    format!("test")
 }
 
 
 
 /// Python Inlining Code
 /// Allows for Python Bindings in Rust
-fn python() -> Context {
+/* fn python() -> Context {
     let c = Context::new();
 
     c.run (python! {
@@ -412,7 +399,7 @@ fn python() -> Context {
     });
 
     return c;
-}
+} */
 
 fn main() {
 
