@@ -1,16 +1,14 @@
-#![feature(decl_macro)]
-
 extern crate rocket;
 //extern crate rocket_contrib;
 
 use std::collections::HashMap;
 use std::path::{PathBuf, Path};
-use rocket::request::Form;
-use rocket_contrib::json::{Json, self};
+use rocket::form::Form;
 use rocket::{get, routes, FromForm, post, uri};
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 use rusqlite::Connection;
 use rand::Rng;
+
 
 /* 
 CONSTANT VARIABLES
@@ -190,7 +188,8 @@ Using Rust Rocket over Python Flask
 Python Flask has weird mem leaks -> https://stackoverflow.com/questions/49991234/flask-app-memory-leak-caused-by-each-api-call
 ______________________________________________________________________________________________________________________________
 */
-use rocket::response::{NamedFile, Redirect};
+use rocket::response::Redirect;
+use rocket::fs::NamedFile;
 
 /// every item in the /assets/ folder can be used
 /// This can include .css files, .img files, etc.
@@ -199,11 +198,11 @@ fn file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("assets/").join(file)).ok()
 }
 
-use rocket::http::{Cookies, Cookie, RawStr};
+use rocket::http::{Cookie, CookieJar};
 
 /// home page
 #[get("/")]
-fn index(cookies: Cookies) -> Result<Template, Redirect> {
+fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     if let Some(_) = cookies.get("token") {
         // Token is present, redirect to apitoken route
         return Err(Redirect::to(uri!(apitoken)));
@@ -236,7 +235,7 @@ fn register() -> Template {
 /// If exists -> Do not Insert Data to SQL
 /// Otherwise -> Insert data to SQL; Generate Unique_ID , API_Unique_ID
 #[post("/register", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn registerpost(user_input: Form<Register>, mut cookies: Cookies) -> Redirect {
+fn registerpost(user_input: Form<Register>, mut cookies: &CookieJar<'_>) -> Redirect {
 
     print!("{:?}",user_input);
 
@@ -269,7 +268,7 @@ fn login() -> Template {
 
 
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn loginpost(user_input: Form<Login>, mut cookies: Cookies) -> Redirect {
+fn loginpost(user_input: Form<Login>, mut cookies: &CookieJar<'_>) -> Redirect {
 
     print!("{:?}",user_input);
 
@@ -294,13 +293,13 @@ struct Api_response {
 
 /// Api Page
 #[get("/api?<content>")]
-fn api(mut content: String, cookies: Cookies) -> String {
+fn api(mut content: String, cookies: &CookieJar<'_>) -> String {
 
-    if cookies.get("token").is_none() { //variable exists
+    if cookies.get("token").map(|crumb| format!("{}", crumb.value())).is_none() { //variable exists
         return r#"{"Status": 1}"#.to_string();
     }
 
-    let email = cookies.get("email").unwrap().value();
+    let email = cookies.get("email").map(|crumb| format!("Message: {}", crumb.value()));
 
     if !(DataSql::user_exist(&DataSql { ..Default::default() }, email.to_string())) {
         return r#"{"Status": 1}"#.to_string();
@@ -410,5 +409,5 @@ fn main() {
    //let x = DataSql::add_user(login { email: "test@gmail.com".to_string(), content: "Password".to_string(), business: "Mewgem".to_string() });
    //print!("{}",x);
 
-   rocket::ignite().attach(Template::fairing()).mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).launch();
+   rocket::build().attach().mount("/", routes![index, api, register, registerpost, file, login, loginpost, apitoken, api_post]).launch();
 }
