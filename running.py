@@ -1,34 +1,33 @@
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-import torch
-import numpy as np
+try:
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    import torch
+    import numpy as np
+except:
+    print("FUCK")
 
-# Use the loaded model and tokenizer for inference
-def get_prediction_with_loaded_model(text, loaded_model = AutoModelForSequenceClassification.from_pretrained('./model/'), loaded_tokenizer = AutoTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2')):
-    encoding = loaded_tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
-    outputs = loaded_model(**encoding)
-
+def get_prediction(model, tokenizer, text):
+    encoding = tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
+    encoding = {k: v.to(model.device) for k, v in encoding.items()}
+    outputs = model(**encoding)
     sigmoid = torch.nn.Sigmoid()
     probs = sigmoid(outputs.logits.squeeze().cpu()).detach().numpy()
     label = np.argmax(probs, axis=-1)
+    
+    return {
+        'sentiment': 'Spam' if label == 1 else 'Ham',
+        'probability': probs[1] if label == 1 else probs[0]
+    }
 
-    if label == 1:
-        return {
-            'sentiment': 'Spam',
-            'probability': probs[1]
-        }
-    else:
-        return {
-            'sentiment': 'Ham',
-            'probability': probs[0]
-        }
+def load_model_and_tokenizer(model_path=f'./otisv1/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
+    # Load the model's state_dict using torch.load
+    model_state_dict = torch.load(f"{model_path}/model.pth")
+    model = AutoModelForSequenceClassification.from_pretrained(tokenizer_name, state_dict=model_state_dict)
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    return model, tokenizer
 
-
-def main(*argv):
-    combined_args = ' '.join(argv)
-    print(get_prediction_with_loaded_model(combined_args))
+MODEL, TOKENIZER = load_model_and_tokenizer()
 
 # Example usage:
 if __name__ == "__main__":
-    import sys
-    arguments = sys.argv[1:]
-    main(*arguments)
+    x = get_prediction(MODEL, TOKENIZER, "test")
+    print(x)

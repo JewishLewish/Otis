@@ -5,6 +5,7 @@ mod otisonnx;
 
 use std::collections::HashMap;
 use std::path::{PathBuf, Path};
+use otisonnx::{load, run};
 use rocket::form::Form;
 use rocket::{get, routes, FromForm, post, uri};
 use rocket_dyn_templates::Template;
@@ -352,6 +353,7 @@ struct ApiInput {
 }
 
 use rocket::serde::{Serialize, json::Json};
+use stable_inline_python::PyContext;
 
 
 #[post("/api", format = "application/json", data = "<json_data>")]
@@ -416,7 +418,9 @@ fn api_post(json_data: Json<ApiInput>) -> String {
 #[launch]
 fn rocket() -> _ {
 
-    otisonnx::test();
+    let c = PyContext::new();
+
+    load(&c);
 
    DataSql::__init__();
    //let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, "test".to_string());

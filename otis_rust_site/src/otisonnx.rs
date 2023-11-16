@@ -1,40 +1,43 @@
-use onnxruntime::{Environment, GraphOptimizationLevel, SessionOptions, Tensor};
+use stable_inline_python::PyContext;
 
-fn main() -> anyhow::Result<()> {
-    // Initialize the ONNX Runtime environment
-    let environment = Environment::builder()
-        .with_name("onnxruntime-rust-sentiment-analysis")
-        .with_log_level(onnxruntime::LoggingLevel::Verbose)
-        .build()
-        .expect("Failed to initialize the environment");
+pub fn 
+load(c: &PyContext) {
 
-    // Load the ONNX model
-    let model_path = "path/to/your/human_sentiment_model.safetensor";
-    let session_options = SessionOptions::new().graph_optimization_level(GraphOptimizationLevel::Basic);
-    let mut session = environment
-        .new_session_builder(session_options)
-        .expect("Failed to create session builder")
-        .load_model(model_path)
-        .expect("Failed to load model");
+    c.run(r#"
+try:
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    import torch
+    import numpy as np
+except:
+    print("FUCK")
 
-    // Example input data (replace with your actual input data)
-    let input_data: Vec<f32> = ["test"];
-    let input_tensor = Tensor::new_from_slice(&input_data, /* shape of your input tensor */)
-        .expect("Failed to create input tensor");
-
-    // Run the inference
-    let outputs = session.run(vec![input_tensor]).expect("Failed to run inference");
-
-    // Process the output tensor(s) as needed
-    for output_tensor in outputs {
-        let output_data: Vec<f32> = output_tensor
-            .as_slice()
-            .expect("Failed to retrieve output tensor data")
-            .to_vec();
-
-        // Process output data as needed
-        println!("Output Data: {:?}", output_data);
+def get_prediction(model, tokenizer, text):
+    encoding = tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
+    encoding = {k: v.to(model.device) for k, v in encoding.items()}
+    outputs = model(**encoding)
+    sigmoid = torch.nn.Sigmoid()
+    probs = sigmoid(outputs.logits.squeeze().cpu()).detach().numpy()
+    label = np.argmax(probs, axis=-1)
+    
+    return {
+        'sentiment': 'Spam' if label == 1 else 'Ham',
+        'probability': probs[1] if label == 1 else probs[0]
     }
 
-    Ok(())
+def load_model_and_tokenizer(model_path=f'./otisv1/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
+    # Load the model's state_dict using torch.load
+    model_state_dict = torch.load(f"{model_path}/model.pth")
+    model = AutoModelForSequenceClassification.from_pretrained(tokenizer_name, state_dict=model_state_dict)
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    return model, tokenizer
+
+MODEL, TOKENIZER = load_model_and_tokenizer()
+
+"#);
+} 
+
+pub fn 
+run(c: &PyContext, input: &str) -> String{
+    c.run(format!(r#"x = get_prediction(MODEL, TOKENIZER, "{}")"#,input).as_str());
+    c.get::<String>("x").unwrap()
 }
