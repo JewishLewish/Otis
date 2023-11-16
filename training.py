@@ -7,6 +7,8 @@ import torch.onnx
 import numpy as np
 import pyarrow as pa
 from datasets import Dataset
+from transformers import BertModel, BertConfig
+
 
 OUTPUT = "otisv1"
 
@@ -102,6 +104,19 @@ def convert_to_onnx(model, tokenizer, path=f'./{OUTPUT}/onnx/model.onnx', input_
 
     print(f"Model successfully exported to {path}")
 
+def convert_pth_to_transformers_format(pth_model_path=f"./{OUTPUT}/model.pth", transformers_model_path=f"./{OUTPUT}/transformers"):
+    # Initialize an empty Transformers model
+    transformers_model = BertModel(BertConfig())
+
+    # Load the state_dict from the local PyTorch model
+    state_dict = torch.load(pth_model_path)
+
+    # Load the state_dict into the Transformers model
+    transformers_model.load_state_dict(state_dict)
+
+    # Save the Transformers model
+    transformers_model.save_pretrained(transformers_model_path)
+
 def main():
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
@@ -117,6 +132,9 @@ def main():
 
     # Save the trained model
     save_model(tokenizer=tokenizer, model=model)
+
+    #Convert to transformers
+    convert_pth_to_transformers_format()
 
     save_model_as_safetensors(model=model)
 
