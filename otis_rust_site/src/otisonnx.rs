@@ -1,36 +1,40 @@
-// Copyright 2019-present, the HuggingFace Inc. team, The Google AI Language Team and Facebook, Inc.
-// Copyright 2019 Guillaume Becquin
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//     http://www.apache.org/licenses/LICENSE-2.0
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+use onnxruntime::{Environment, GraphOptimizationLevel, SessionOptions, Tensor};
 
-use rust_bert::bert::{BertConfigResources, BertModelResources, BertVocabResources};
-use rust_bert::pipelines::common::{ModelResource, ModelType};
-use rust_bert::pipelines::ner::NERModel;
-use rust_bert::pipelines::sentiment::{SentimentModel, SentimentConfig};
-use rust_bert::pipelines::token_classification::{
-    LabelAggregationOption, TokenClassificationConfig,
-};
-use rust_bert::pipelines::zero_shot_classification::ZeroShotClassificationModel;
-use rust_bert::resources::{RemoteResource, LocalResource};
+fn main() -> anyhow::Result<()> {
+    // Initialize the ONNX Runtime environment
+    let environment = Environment::builder()
+        .with_name("onnxruntime-rust-sentiment-analysis")
+        .with_log_level(onnxruntime::LoggingLevel::Verbose)
+        .build()
+        .expect("Failed to initialize the environment");
 
+    // Load the ONNX model
+    let model_path = "path/to/your/human_sentiment_model.safetensor";
+    let session_options = SessionOptions::new().graph_optimization_level(GraphOptimizationLevel::Basic);
+    let mut session = environment
+        .new_session_builder(session_options)
+        .expect("Failed to create session builder")
+        .load_model(model_path)
+        .expect("Failed to load model");
 
-pub fn test() -> anyhow::Result<()> {
-    let sentiment_classifier = SentimentModel::new( SentimentConfig { model_type: todo!(), model_resource: todo!(), config_resource: todo!(), vocab_resource: todo!(), merges_resource: todo!(), lower_case: todo!(), strip_accents: todo!(), add_prefix_space: todo!(), device: todo!() })?;
-                                                        
-    let input = [
-        "Probably my all-time favorite movie, a story of selflessness, sacrifice and dedication to a noble cause, but it's not preachy or boring.",
-        "This film tried to be too many things all at once: stinging political satire, Hollywood blockbuster, sappy romantic comedy, family values promo...",
-        "If you like original gut wrenching laughter you will like this movie. If you are young or old then you will love this movie, hell even my mom liked it.",
-    ];
+    // Example input data (replace with your actual input data)
+    let input_data: Vec<f32> = ["test"];
+    let input_tensor = Tensor::new_from_slice(&input_data, /* shape of your input tensor */)
+        .expect("Failed to create input tensor");
 
-    let output = sentiment_classifier.predict(&input);
+    // Run the inference
+    let outputs = session.run(vec![input_tensor]).expect("Failed to run inference");
+
+    // Process the output tensor(s) as needed
+    for output_tensor in outputs {
+        let output_data: Vec<f32> = output_tensor
+            .as_slice()
+            .expect("Failed to retrieve output tensor data")
+            .to_vec();
+
+        // Process output data as needed
+        println!("Output Data: {:?}", output_data);
+    }
 
     Ok(())
 }
