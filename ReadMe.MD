@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/BlossomDNS/register">
+  <a href="https://github.com/JewishLewish/Otis">
     <img src="https://cdn.discordapp.com/attachments/660227834500874276/1175310288212463706/47._Big_Tree_1.png?ex=656ac400&is=65584f00&hm=0518b63834cd0da8208e79c1b019fd41e170aaa860d4812695fb8a43d43abc55&" alt="Logo" width="200" height="200">
   </a>
 
@@ -12,7 +12,7 @@
     <br />
     <a href="https://huggingface.co/Titeiiko/OTIS-Official-Spam-Model"><strong>» » Hugging Face</strong></a>  
     <br />
-    <a href="https://github.com/BlossomDNS/register"><strong>» » Github</strong></a>  
+    <a href="https://github.com/JewishLewish/Otis"><strong>» » Github</strong></a>  
     <br />
     <div align="center">
 	
