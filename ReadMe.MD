@@ -1,4 +1,113 @@
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/BlossomDNS/register">
+    <img src="https://cdn.discordapp.com/attachments/660227834500874276/1175309122682499122/47._Big_Tree.png?ex=656ac2eb&is=65584deb&hm=1577942605bd326487dfc9454a8d62c190cff7b48d6518256a7041c854de1cd5&" alt="Logo" width="200" height="200">
+  </a>
+
+  <h3 align="center">Otis Anti-Spam AI</h3>
+
+  <p align="center">
+    Go Away Spam!
+    <br />
+    <a href="https://huggingface.co/Titeiiko/OTIS-Official-Spam-Model"><strong>» » Hugging Face</strong></a>  
+    <br />
+    <br />
+    <div align="center">
+	
+![GitHub forks](https://img.shields.io/github/forks/JewishLewish/otis?color=63C9A4&style=for-the-badge)
+![GitHub Repo stars](https://img.shields.io/github/stars/JewishLewish/otis?color=63C9A4&style=for-the-badge)
+![GitHub](https://img.shields.io/github/license/JewishLewish/otis?color=63C9A4&style=for-the-badge)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JewishLewish/otis?color=63C9A4&style=for-the-badge)
+
+</div>
+
+  </p>
+</div>
+
+
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#Quickstart">Quickstart</a>
+    </li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ol>
+</details>
+
+<!-- Quickstar -->
+## Quickstart
+```py
+# pip install transformers
+from transformers import pipeline
+
+
+def analyze_output(input: str):
+    pipe = pipeline("text-classification", model="Titeiiko/OTIS-Official-Spam-Model")
+    x = pipe(input)[0]
+    if x["label"] == "LABEL_0":
+        return {"type":"Not Spam", "probability":x["score"]}
+    else:
+        return {"type":"Spam", "probability":x["score"]}
+    
+
+print(analyze_output("Cһeck out our amazinɡ bооѕting serviсe ѡhere you can get to Leveӏ 3 for 3 montһs for just 20 USD."))
+
+#Output: {'type': 'Spam', 'probability': 0.9996588230133057}
+```
+
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
+
+
+Introducing Otis: Otis is an advanced anti-spam artificial intelligence model designed to mitigate and combat the proliferation of unwanted and malicious content within digital communication channels.
+
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- CONTRIBUTING -->
+## Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b JewishLewish/Otis`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeatures'`)
+4. Push to the Branch (`git push origin JewishLewish/Otis`)
+5. Open a Pull Request
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- LICENSE -->
+## License
+
+Distributed under the BSD-3 License. See `LICENSE.txt` for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- CONTACT -->
+## Contact
+
+My Email: lenny@lunes.host
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
 # OtisV1
+
 ```
 {'loss': 0.2879, 'learning_rate': 4.75e-05, 'epoch': 0.5}
 {'loss': 0.1868, 'learning_rate': 4.5e-05, 'epoch': 1.0}                                                                                                                                                                                                                                                                     
