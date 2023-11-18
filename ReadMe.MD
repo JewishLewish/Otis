@@ -12,6 +12,7 @@
     <br />
     <a href="https://huggingface.co/Titeiiko/OTIS-Official-Spam-Model"><strong>» » Hugging Face</strong></a>  
     <br />
+    <a href="https://github.com/BlossomDNS/register"><strong>» » Github</strong></a>  
     <br />
     <div align="center">
 	
