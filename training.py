@@ -11,7 +11,7 @@ from transformers import BertModel, BertConfig
 
 
 OUTPUT = "otisv1"
-
+TRAINING = 10000
 def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')):
     text = str(row['sms']).strip()
     encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
@@ -33,7 +33,7 @@ def prepare_datasets(train_df, valid_size=0.2, random_state=2022):
     return train_hg, valid_hg
 
 def train_and_evaluate(model, train_dataset, eval_dataset, tokenizer):
-    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=.1)
+    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=TRAINING*.001) #.1 = 100 
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -49,7 +49,7 @@ def save_model_as_safetensors(model, path=f'./{OUTPUT}/'):
 
 def save_model(model, tokenizer, path=f'./{OUTPUT}/'):
     # Save the model's state_dict using torch.save
-    torch.save(model.state_dict(), f"{path}/model.pth")
+    torch.save(model.state_dict(), f"{path}/pytorch_model.bin")
     # Save the tokenizer using save_pretrained
     tokenizer.save_pretrained(path)
 
@@ -60,7 +60,7 @@ def load_model_and_tokenizer_as_safetensors(model_path=f'./{OUTPUT}/', tokenizer
 
 def load_model_and_tokenizer(model_path=f'./{OUTPUT}/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
     # Load the model's state_dict using torch.load
-    model_state_dict = torch.load(f"{model_path}/model.pth")
+    model_state_dict = torch.load(f"{model_path}/pytorch_model.bin")
     model = AutoModelForSequenceClassification.from_pretrained(tokenizer_name, state_dict=model_state_dict)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     return model, tokenizer
@@ -74,11 +74,11 @@ def get_prediction(model, tokenizer, text):
     label = np.argmax(probs, axis=-1)
     
     return {
-        'sentiment': 'Spam' if label == 1 else 'Ham',
+        'Spam': 'Spam' if label == 1 else 'Ham',
         'probability': probs[1] if label == 1 else probs[0]
     }
 
-def convert_to_onnx(model, tokenizer, path=f'./{OUTPUT}/onnx/model.onnx', input_example="buy online and save..."):
+def convert_to_onnx(model, tokenizer, path=f'./{OUTPUT}/model.onnx', input_example="buy online and save..."):
     import os
     # Set the model to evaluation mode
     model.eval()
@@ -104,19 +104,6 @@ def convert_to_onnx(model, tokenizer, path=f'./{OUTPUT}/onnx/model.onnx', input_
 
     print(f"Model successfully exported to {path}")
 
-def convert_pth_to_transformers_format(pth_model_path=f"./{OUTPUT}/model.pth", transformers_model_path=f"./{OUTPUT}/transformers"):
-    # Initialize an empty Transformers model
-    transformers_model = BertModel(BertConfig())
-
-    # Load the state_dict from the local PyTorch model
-    state_dict = torch.load(pth_model_path)
-
-    # Load the state_dict into the Transformers model
-    transformers_model.load_state_dict(state_dict)
-
-    # Save the Transformers model
-    transformers_model.save_pretrained(transformers_model_path)
-
 def main():
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
@@ -134,8 +121,6 @@ def main():
     save_model(tokenizer=tokenizer, model=model)
 
     #Convert to transformers
-    convert_pth_to_transformers_format()
-
     save_model_as_safetensors(model=model)
 
     # Load the model and tokenizer

@@ -11,5 +11,5 @@ rusqlite = { version = "0.29.0", features = ["bundled"] }
 serde = { version = "1.0.192", features = ["derive"] }
 rocket = { version = "=0.5.0-rc.4", features = ["json", "secrets"] }
 rocket_dyn_templates = { version = "=0.1.0-rc.4", features = ["handlebars"] }
-stable-inline-python = "0.1.0"
+stable-inline-python = "0.1.2"
 pyo3 = { version = "0.20.0", features = ["extension-module"] }

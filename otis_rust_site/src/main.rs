@@ -421,6 +421,7 @@ fn rocket() -> _ {
     let c = PyContext::new();
 
     load(&c);
+    run(&c, "test");
 
    DataSql::__init__();
    //let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, "test".to_string());

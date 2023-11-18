@@ -3,7 +3,7 @@ use stable_inline_python::PyContext;
 pub fn 
 load(c: &PyContext) {
 
-    c.run(r#"
+    let x = c.run(r#"
 try:
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
     import torch
@@ -32,8 +32,8 @@ def load_model_and_tokenizer(model_path=f'./otisv1/', tokenizer_name='google/ber
     return model, tokenizer
 
 MODEL, TOKENIZER = load_model_and_tokenizer()
-
 "#);
+    println!("{:?}",x);
 } 
 
 pub fn 

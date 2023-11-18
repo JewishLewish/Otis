@@ -21,6 +21,7 @@ shuttle
 #Otis_Rust_Site
 otis_rust_site/target
 otis_rust_site/Cargo.lock
+ort-test 
 
 #csv files - not needed
 *.csv
