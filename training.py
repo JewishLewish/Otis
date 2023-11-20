@@ -23,7 +23,7 @@ def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncas
 
 def load_and_process_data():
     df = pd.read_csv("spam_dataset.csv")
-    processed_data = [process_data(df.iloc[i]) for i in range(min(len(df), 10000))]
+    processed_data = [process_data(df.iloc[i]) for i in range(len(df))]
     new_df = pd.DataFrame(processed_data)
     return new_df
 
