@@ -12,7 +12,6 @@ def get_prediction(model, tokenizer, text):
     sigmoid = torch.nn.Sigmoid()
     probs = sigmoid(outputs.logits.squeeze().cpu()).detach().numpy()
     label = np.argmax(probs, axis=-1)
-    
     return {
         'sentiment': 'Spam' if label == 1 else 'Ham',
         'probability': probs[1] if label == 1 else probs[0]
@@ -20,7 +19,7 @@ def get_prediction(model, tokenizer, text):
 
 def load_model_and_tokenizer(model_path=f'./otisv1/', tokenizer_name='google/bert_uncased_L-2_H-128_A-2'):
     # Load the model's state_dict using torch.load
-    model_state_dict = torch.load(f"{model_path}/model.pth")
+    model_state_dict = torch.load(f"{model_path}/pytorch_model.bin")
     model = AutoModelForSequenceClassification.from_pretrained(tokenizer_name, state_dict=model_state_dict)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     return model, tokenizer
@@ -29,5 +28,7 @@ MODEL, TOKENIZER = load_model_and_tokenizer()
 
 # Example usage:
 if __name__ == "__main__":
-    x = get_prediction(MODEL, TOKENIZER, "test")
-    print(x)
+    while True:
+        y = input(">>> ")
+        x = get_prediction(MODEL, TOKENIZER, y)
+        print(x)

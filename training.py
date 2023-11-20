@@ -16,7 +16,12 @@ TRAINING = 10000
 def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')):
     text = str(row['sms']).strip()
     encodings = tokenizer(text, padding="max_length", truncation=True, max_length=128)
-    label = 1 if row["label"] == 1 else 0
+    label = 0
+    if row["label"] == 1:
+        label += 1
+    else:
+        label = 0
+    
     encodings['label'] = label
     encodings['text'] = text
     return encodings
@@ -34,7 +39,7 @@ def prepare_datasets(train_df, valid_size=0.2, random_state=2022):
     return train_hg, valid_hg
 
 def train_and_evaluate(model, train_dataset, eval_dataset, tokenizer):
-    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=TRAINING*.001) #.1 = 100 
+    training_args = TrainingArguments(output_dir="./result", evaluation_strategy="epoch", num_train_epochs=10) #.1 = 100 
     trainer = Trainer(
         model=model,
         args=training_args,
