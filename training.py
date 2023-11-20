@@ -11,7 +11,7 @@ from transformers import BertModel, BertConfig
 
 
 OUTPUT = "otisv1"
-TRAINING = 30000
+TRAINING = 10000
 
 def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')):
     text = str(row['sms']).strip()
