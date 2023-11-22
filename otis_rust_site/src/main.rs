@@ -30,6 +30,7 @@ struct DataSql {
     dbfile: String
 }
 
+
 #[derive(Debug)]
 struct UserSql {
     email: String,
@@ -214,7 +215,6 @@ fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Err(Redirect::to(uri!(apitoken)));
     }
 
-    print!("NO COOKIES FOUND!");
     let context: HashMap<String, String> = HashMap::new();
     Ok(Template::render("index", &context))
 }
@@ -372,47 +372,6 @@ fn api_post(json_data: Json<ApiInput>) -> String {
 
     format!("{}",x)
 }
-
-
-
-/// Python Inlining Code
-/// Allows for Python Bindings in Rust
-/* fn python() -> Context {
-    let c = Context::new();
-
-    c.run (python! {
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-        import torch
-        import numpy as np
-
-        # Use the loaded model and tokenizer for inference
-        def get_prediction_with_loaded_model(text, loaded_model = AutoModelForSequenceClassification.from_pretrained("./otisv1/"), loaded_tokenizer = AutoTokenizer.from_pretrained("google/bert_uncased_L-2_H-128_A-2")):
-            encoding = loaded_tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=128)
-            outputs = loaded_model(**encoding)
-
-            sigmoid = torch.nn.Sigmoid()
-            probs = sigmoid(outputs.logits.squeeze().cpu()).detach().numpy()
-            label = np.argmax(probs, axis=-1)
-
-            if label == 1:
-                return {
-                    "type": "Spam",
-                    "probability": probs[1]
-                }
-            else:
-                return {
-                    "type": "Ham",
-                    "probability": probs[0]
-                }
-
-
-        def main(target):
-            return str(get_prediction_with_loaded_model(target))
-    });
-
-    return c;
-} */
-
 
 
 #[launch]
