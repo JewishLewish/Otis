@@ -304,26 +304,30 @@ struct Api_response {
 fn api(mut content: String, cookies: &CookieJar<'_>) -> String {
 
     if cookies.get("token").map(|crumb| format!("{}", crumb.value())).is_none() { //variable exists
-        return r#"{"Status": 1}"#.to_string();
+        return r#"{"Status": "No Token Associated"}"#.to_string();
     }
 
-    let email = cookies.get("email").map(|crumb| format!("Message: {}", crumb.value()));
+    let email = cookies.get("email").map(|crumb| format!("{}", crumb.value()));
 
     if !(DataSql::user_exist(&DataSql { ..Default::default() }, email.unwrap())) {
-        return r#"{"Status": 1}"#.to_string();
+        return r#"{"Status": "No Email Associated"}"#.to_string();
     }
 
     let api_token = cookies.get("token").unwrap().value();
 
     if !(DataSql::token_exist(&DataSql { ..Default::default() }, api_token.to_string())) {
-        return r#"{"Status": 1}"#.to_string();
+        return r#"{"Status": "No Token Associated"}"#.to_string();
     }
 
     //all checks are passed!
 
     content = content.replace("%20", " ");
 
-    format!("test")
+    let c = PyContext::new();
+    load(&c);
+    let x  = run(&c, &content);
+
+    format!("{}",x)
 }
 
 
@@ -367,10 +371,11 @@ fn api_post(json_data: Json<ApiInput>) -> String {
         return r#"{"Status": "No Api Token Associated"}"#.to_string();
     }
 
-    // All checks are passed!
-    let content = json_data.content;
+    let c = PyContext::new();
+    load(&c);
+    let x  = run(&c, &json_data.content);
 
-    format!("test")
+    format!("{}",x)
 }
 
 
@@ -418,11 +423,11 @@ fn api_post(json_data: Json<ApiInput>) -> String {
 #[launch]
 fn rocket() -> _ {
 
-    let c = PyContext::new();
+    //let c = PyContext::new();
 
-    load(&c);
-    let x  = run(&c, "test");
-    print!("{}",x);
+    //load(&c);
+    //let x  = run(&c, "test");
+    //print!("{}",x);
 
    DataSql::__init__();
    //let x = DataSql::find_data_with_email(&DataSql {..Default::default()}, "test".to_string());
