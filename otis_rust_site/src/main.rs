@@ -241,7 +241,7 @@ fn register() -> Template {
 /// If exists -> Do not Insert Data to SQL
 /// Otherwise -> Insert data to SQL; Generate Unique_ID , API_Unique_ID
 #[post("/register", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn registerpost(user_input: Form<Register>, mut cookies: &CookieJar<'_>) -> Redirect {
+fn registerpost(user_input: Form<Register>, cookies: &CookieJar<'_>) -> Redirect {
 
     print!("{:?}",user_input);
     let copy = user_input.into_inner();
@@ -275,7 +275,7 @@ fn login() -> Template {
 
 
 #[post("/login", format = "application/x-www-form-urlencoded", data = "<user_input>")]
-fn loginpost(user_input: Form<Login>, mut cookies: &CookieJar<'_>) -> Redirect {
+fn loginpost(user_input: Form<Login>, cookies: &CookieJar<'_>) -> Redirect {
 
     print!("{:?}",user_input);
 
@@ -292,11 +292,6 @@ fn loginpost(user_input: Form<Login>, mut cookies: &CookieJar<'_>) -> Redirect {
     } else {
         Redirect::to(uri!(login))
     }
-}
-
-struct Api_response {
-    status: String,
-    output: String
 }
 
 /// Api Page
@@ -353,7 +348,7 @@ use serde::Deserialize;
 #[serde(crate = "rocket::serde")]
 struct ApiInput {
     content: String,
-    apiToken: String
+    api_token: String
 }
 
 use rocket::serde::{Serialize, json::Json};
@@ -365,7 +360,7 @@ fn api_post(json_data: Json<ApiInput>) -> String {
 
     let json_data =  json_data.into_inner();
 
-    let api_token = json_data.apiToken;
+    let api_token = json_data.api_token;
 
     if !(DataSql::token_exist(&DataSql { ..Default::default() }, api_token.to_string())) {
         return r#"{"Status": "No Api Token Associated"}"#.to_string();

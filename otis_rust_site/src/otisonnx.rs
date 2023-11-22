@@ -3,7 +3,7 @@ use stable_inline_python::PyContext;
 pub fn 
 load(c: &PyContext) {
 
-    let x = c.run(r#"
+    let _x = c.run(r#"
 from transformers import pipeline
 
 def analyze_output(input: str, PIPE = pipeline("text-classification", model="Titeiiko/OTIS-Official-Spam-Model")):
