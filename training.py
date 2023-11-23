@@ -17,7 +17,6 @@ def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncas
     label = 0
     if row["label"] == 1:
         label += 1
-        print("SCAM")
     else:
         label = 0
     
@@ -26,7 +25,7 @@ def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncas
     return encodings
 
 def load_and_process_data():
-    df = pd.read_csv("spam_dataset.csv")
+    df = pd.read_csv("spam_dataset.csv", encoding='unicode_escape')
     processed_data = [process_data(df.iloc[i]) for i in range(len(df))]
     new_df = pd.DataFrame(processed_data)
     return new_df
