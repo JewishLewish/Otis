@@ -17,6 +17,7 @@ def process_data(row, tokenizer = AutoTokenizer.from_pretrained('bert-base-uncas
     label = 0
     if row["label"] == 1:
         label += 1
+        print("SCAM")
     else:
         label = 0
     
@@ -109,8 +110,6 @@ def convert_to_onnx(model, tokenizer, path=f'./{OUTPUT}/model.onnx', input_examp
     print(f"Model successfully exported to {path}")
 
 def main():
-    import os 
-    os.makedirs(os.path.dirname(model), exist_ok=True)
 
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
